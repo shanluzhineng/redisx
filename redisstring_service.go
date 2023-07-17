@@ -5,6 +5,8 @@ import "github.com/go-redis/redis/v8"
 type IRedisStringService interface {
 	//获取key值
 	StringGet(key string, opts ...RedisValueOption) IRedisValue
+	//获取多个key值
+	StringMGet(opts []RedisValueOption, keys ...string) (map[string]IRedisValue, error)
 	//设置值
 	StringSet(key string, value interface{}, opts ...RedisValueOption) error
 
@@ -43,6 +45,32 @@ func (s *RedisStringService) StringGet(key string, opts ...RedisValueOption) IRe
 		return newErrRedisValue(err)
 	}
 	return newRedisValue(b, s.options.Unmarshal)
+}
+
+// 获取多个key值
+func (s *RedisStringService) StringMGet(opts []RedisValueOption, keys ...string) (map[string]IRedisValue, error) {
+	options := s.options.createRedisValueOptions()
+	options.applyOption(opts...)
+
+	result := make(map[string]IRedisValue)
+	normalizedKeys := make([]string, 0)
+	for _, eachKey := range keys {
+		currentNormalizedKey := options.appendKeyPrefix(eachKey)
+		normalizedKeys = append(normalizedKeys, currentNormalizedKey)
+		result[eachKey] = newNilRedisValue()
+	}
+	b := s.options.client.MGet(options.ctx, normalizedKeys...)
+	if err := b.Err(); err != nil {
+		if err == redis.Nil {
+			return result, nil
+		}
+		return nil, err
+	}
+	for i, eachKey := range keys {
+		currentRedisValue := b.Val()[i].(string)
+		result[eachKey] = newRedisValue([]byte(currentRedisValue), s.options.Unmarshal)
+	}
+	return result, nil
 }
 
 func (s *RedisStringService) StringSet(key string, value interface{}, opts ...RedisValueOption) error {
