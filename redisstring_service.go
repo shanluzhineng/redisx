@@ -67,7 +67,16 @@ func (s *RedisStringService) StringMGet(opts []RedisValueOption, keys ...string)
 		return nil, err
 	}
 	for i, eachKey := range keys {
-		currentRedisValue := b.Val()[i].(string)
+		val := b.Val()[i]
+		if val == nil {
+			result[eachKey] = newNilRedisValue()
+			continue
+		}
+		currentRedisValue, ok := val.(string)
+		if !ok {
+			result[eachKey] = newNilRedisValue()
+			continue
+		}
 		result[eachKey] = newRedisValue([]byte(currentRedisValue), s.options.Unmarshal)
 	}
 	return result, nil
