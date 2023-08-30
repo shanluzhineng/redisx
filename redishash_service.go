@@ -4,7 +4,7 @@ import "github.com/go-redis/redis/v8"
 
 type IRedisHashService interface {
 	HashGet(key string, field string, opts ...RedisValueOption) IRedisValue
-	HashGetAll(key string, opts ...RedisValueOption) (map[string]IRedisValue, error)
+	HashGetAll(key string, opts ...RedisValueOption) (RedisValueMap, error)
 
 	HashSet(key string, values map[string]interface{}, opts ...RedisValueOption) error
 }
@@ -36,11 +36,11 @@ func (s *RedisHashService) HashGet(key string, field string, opts ...RedisValueO
 }
 
 // get all value from hash
-func (s *RedisHashService) HashGetAll(key string, opts ...RedisValueOption) (map[string]IRedisValue, error) {
+func (s *RedisHashService) HashGetAll(key string, opts ...RedisValueOption) (RedisValueMap, error) {
 	options := s.options.createRedisValueOptions()
 	options.applyOption(opts...)
 
-	result := make(map[string]IRedisValue)
+	result := RedisValueMap{}
 	b := s.options.client.HGetAll(options.ctx, options.appendKeyPrefix(key))
 	if err := b.Err(); err != nil {
 		if err == redis.Nil {
